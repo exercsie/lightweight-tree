@@ -1,17 +1,17 @@
-#include <iostream>
+#include <print>
 #include <filesystem>
-#include <vector>
+#include <cstdint>
 
 namespace Colours {
-    char BLUE[] = "\033[34m";
-    char WHITE[] = "\033[37m";
-    char GREEN[] = "\033[32m";
+    constexpr char BLUE[] = { "\033[34m" };
+    constexpr char WHITE[] = { "\033[37m" };
+    constexpr char GREEN[] = { "\033[32m" };
 }
 
 namespace Counters {
-    int directoryFileCounter{};
-    int executableFileCounter{};
-    int fileCounter{};
+    std::uint32_t directoryFileCounter{};
+    std::uint32_t executableFileCounter{};
+    std::uint32_t fileCounter{};
 }
 
 bool is_file_executable(const std::filesystem::directory_entry& dir) {
@@ -19,29 +19,29 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
     return (perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
 }
 
-void print_tree(std::filesystem::path currentPath) {
-    std::cout << currentPath.string() << std::endl;
-    std::cout << "|" << std::endl;
+void print_tree(const std::filesystem::path& currentPath) {
+    std::println("{}", currentPath.string());
+    std::println("|");
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
-        std::cout << Colours::WHITE << "|";
+        std::print("{}|", Colours::WHITE);
         if(dir.is_directory()) {
             ++Counters::directoryFileCounter;
-            std::cout << "-";
-            std::cout << Colours::BLUE << dir.path().lexically_relative(currentPath).string() << std::endl;
+            std::print("-");
+            std::println("{}{}", Colours::BLUE, dir.path().lexically_relative(currentPath).string());
         } else if(is_file_executable(dir)) {
             ++Counters::executableFileCounter;
-            std::cout << "-";
-            std::cout << Colours::GREEN << dir.path().lexically_relative(currentPath).string() << std::endl;
+            std::print("-");
+            std::println("{}{}", Colours::GREEN, dir.path().lexically_relative(currentPath).string());
         } else {
-            std::cout << "-";
-            std::cout << Colours::WHITE << dir.path().lexically_relative(currentPath).string() << std::endl;
+            std::print("-");
+            std::println("{}{}", Colours::WHITE, dir.path().lexically_relative(currentPath).string());
         }
 
         ++Counters::fileCounter;
     }
 
-    std::cout << Colours::WHITE << std::endl;
-    std::cout << Counters::directoryFileCounter << " directories, " << Counters::executableFileCounter << " executables, and " << Counters::fileCounter << " total files.\n";
+    std::println("{}", Colours::WHITE);
+    std::println("{} directories, {} executables, and {} total files.", Counters::directoryFileCounter, Counters::executableFileCounter, Counters::fileCounter);
 }
 
 int main(int argc, char* argv[]) {
