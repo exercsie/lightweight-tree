@@ -5,6 +5,11 @@
 #define WHITE "\033[37m"
 #define GREEN "\033[32m"
 
+bool is_file_executable(const std::filesystem::directory_entry& dir) {
+    const auto perms = std::filesystem::status(dir).permissions();
+    return (perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
+}
+
 void print_tree(std::filesystem::path currentPath) {
     std::cout << currentPath.string() << std::endl;
     std::cout << "|" << std::endl;
@@ -13,6 +18,9 @@ void print_tree(std::filesystem::path currentPath) {
         if(dir.is_directory()) {
             std::cout << "-";
             std::cout << BLUE << dir << std::endl;
+        } else if(is_file_executable(dir)) {
+            std::cout << "-";
+            std::cout << GREEN << dir << std::endl;
         } else {
             std::cout << "-";
             std::cout << WHITE << dir << std::endl;
