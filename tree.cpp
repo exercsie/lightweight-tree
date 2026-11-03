@@ -1,9 +1,18 @@
 #include <iostream>
 #include <filesystem>
+#include <vector>
 
-#define BLUE "\033[34m"
-#define WHITE "\033[37m"
-#define GREEN "\033[32m"
+namespace Colours {
+    char BLUE[] = "\033[34m";
+    char WHITE[] = "\033[37m";
+    char GREEN[] = "\033[32m";
+}
+
+namespace Counters {
+    int directoryFileCounter{};
+    int executableFileCounter{};
+    int fileCounter{};
+}
 
 bool is_file_executable(const std::filesystem::directory_entry& dir) {
     const auto perms = std::filesystem::status(dir).permissions();
@@ -11,29 +20,28 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
 }
 
 void print_tree(std::filesystem::path currentPath) {
-    int directoryCounter{};
-    int fileCounter{};
     std::cout << currentPath.string() << std::endl;
     std::cout << "|" << std::endl;
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
-        std::cout << WHITE << "|";
+        std::cout << Colours::WHITE << "|";
         if(dir.is_directory()) {
-            ++directoryCounter;
+            ++Counters::directoryFileCounter;
             std::cout << "-";
-            std::cout << BLUE << dir.path().lexically_relative(currentPath).string() << std::endl;
+            std::cout << Colours::BLUE << dir.path().lexically_relative(currentPath).string() << std::endl;
         } else if(is_file_executable(dir)) {
+            ++Counters::executableFileCounter;
             std::cout << "-";
-            std::cout << GREEN << dir.path().lexically_relative(currentPath).string() << std::endl;
+            std::cout << Colours::GREEN << dir.path().lexically_relative(currentPath).string() << std::endl;
         } else {
             std::cout << "-";
-            std::cout << WHITE << dir.path().lexically_relative(currentPath).string() << std::endl;
+            std::cout << Colours::WHITE << dir.path().lexically_relative(currentPath).string() << std::endl;
         }
 
-        ++fileCounter;
+        ++Counters::fileCounter;
     }
 
-    std::cout << WHITE << std::endl;
-    std::cout << directoryCounter << " directories, " << fileCounter << " files.\n";
+    std::cout << Colours::WHITE << std::endl;
+    std::cout << Counters::directoryFileCounter << " directories, " << Counters::executableFileCounter << " executables, and " << Counters::fileCounter << " total files.\n";
 }
 
 int main(int argc, char* argv[]) {
