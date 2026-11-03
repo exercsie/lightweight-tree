@@ -11,11 +11,14 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
 }
 
 void print_tree(std::filesystem::path currentPath) {
+    int directoryCounter{};
+    int fileCounter{};
     std::cout << currentPath.string() << std::endl;
     std::cout << "|" << std::endl;
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
         std::cout << WHITE << "|";
         if(dir.is_directory()) {
+            ++directoryCounter;
             std::cout << "-";
             std::cout << BLUE << dir << std::endl;
         } else if(is_file_executable(dir)) {
@@ -25,7 +28,12 @@ void print_tree(std::filesystem::path currentPath) {
             std::cout << "-";
             std::cout << WHITE << dir << std::endl;
         }
+
+        ++fileCounter;
     }
+
+    std::cout << WHITE << std::endl;
+    std::cout << directoryCounter << " directories, " << fileCounter << " files.\n";
 }
 
 int main(int argc, char* argv[]) {
