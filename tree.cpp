@@ -20,13 +20,13 @@ void print_tree(std::filesystem::path currentPath) {
         if(dir.is_directory()) {
             ++directoryCounter;
             std::cout << "-";
-            std::cout << BLUE << dir << std::endl;
+            std::cout << BLUE << dir.path().lexically_relative(currentPath).string() << std::endl;
         } else if(is_file_executable(dir)) {
             std::cout << "-";
-            std::cout << GREEN << dir << std::endl;
+            std::cout << GREEN << dir.path().lexically_relative(currentPath).string() << std::endl;
         } else {
             std::cout << "-";
-            std::cout << WHITE << dir << std::endl;
+            std::cout << WHITE << dir.path().lexically_relative(currentPath).string() << std::endl;
         }
 
         ++fileCounter;
