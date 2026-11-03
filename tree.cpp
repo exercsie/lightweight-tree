@@ -23,17 +23,14 @@ void print_tree(const std::filesystem::path& currentPath) {
     std::println("{}", currentPath.string());
     std::println("|");
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
-        std::print("{}|", Colours::WHITE);
+        std::print("{}├", Colours::WHITE);
         if(dir.is_directory()) {
             ++Counters::directoryFileCounter;
-            std::print("-");
             std::println("{}{}", Colours::BLUE, dir.path().lexically_relative(currentPath).string());
         } else if(is_file_executable(dir)) {
             ++Counters::executableFileCounter;
-            std::print("-");
             std::println("{}{}", Colours::GREEN, dir.path().lexically_relative(currentPath).string());
         } else {
-            std::print("-");
             std::println("{}{}", Colours::WHITE, dir.path().lexically_relative(currentPath).string());
         }
 
