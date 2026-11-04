@@ -1,28 +1,28 @@
 #include <print>
 #include <filesystem>
 #include <cstdint>
-#include <string>
+#include <string_view>
 
 namespace Console {
-    constexpr std::string console = "[CONSOLE]";
-    constexpr std::string error = "[ERROR]";
+    constexpr std::string_view console = "[CONSOLE]";
+    constexpr std::string_view error = "[ERROR]";
 }
 
 namespace Colours {
-    constexpr std::string BLUE = { "\033[34m" };
-    constexpr std::string WHITE = { "\033[37m" };
-    constexpr std::string GREEN = { "\033[32m" };
-    constexpr std::string ORANGE = { "\033[38;5;208m" };
+    constexpr std::string_view BLUE = { "\033[34m" };
+    constexpr std::string_view WHITE = { "\033[37m" };
+    constexpr std::string_view GREEN = { "\033[32m" };
+    constexpr std::string_view ORANGE = { "\033[38;5;208m" };
 }
 
-namespace Counters {
+struct Counters {
     std::uint32_t directoryFileCounter{};
     std::uint32_t executableFileCounter{};
     std::uint32_t pngFileCounter{};
     std::uint32_t fileCounter{};
-}
+};
 
-bool is_file_png(const std::filesystem::directory_entry& dir) {
+bool is_file_png(const std::filesystem::directory_entrsy& dir) {
     const std::filesystem::path& pngFile(dir);
     return (pngFile.extension() == ".png");
 }
@@ -32,32 +32,33 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
     return (perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
 }
 
-void print_tree(const std::filesystem::path& currentPath) {
+void print_tree(Counters& counter, const std::filesystem::path& currentPath) {
     std::println("{}", currentPath.string());
     std::println("|");
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
         std::print("{}├", Colours::WHITE);
         if(dir.is_directory()) {
-            ++Counters::directoryFileCounter;
+            ++counter.directoryFileCounter;
             std::println("{}{}", Colours::BLUE, dir.path().lexically_relative(currentPath).string());
         } else if(is_file_executable(dir)) {
-            ++Counters::executableFileCounter;
+            ++counter.executableFileCounter;
             std::println("{}{}", Colours::GREEN, dir.path().lexically_relative(currentPath).string());
         } else if(is_file_png(dir)) {
-            ++Counters::pngFileCounter;
+            ++counter.pngFileCounter;
             std::println("{}{}", Colours::ORANGE, dir.path().lexically_relative(currentPath).string());
         } else {
             std::println("{}{}", Colours::WHITE, dir.path().lexically_relative(currentPath).string());
         }
 
-        ++Counters::fileCounter;
+        ++counter.fileCounter;
     }
 
     std::println("{}", Colours::WHITE);
-    std::println("{} directory(ies), {} executable(s), {} png(s), and {} total file(s).", Counters::directoryFileCounter, Counters::executableFileCounter, Counters::pngFileCounter, Counters::fileCounter);
+    std::println("{} directory(ies), {} executable(s), {} png(s), and {} total file(s).", counter.directoryFileCounter, counter.executableFileCounter, counter.pngFileCounter, counter.fileCounter);
 }
 
 int main(int argc, char* argv[]) {
+    Counters counter;
     std::filesystem::path currentPath(".");
     if(argc > 1) {
         if(!std::filesystem::is_directory(argv[1])) {
@@ -66,9 +67,9 @@ int main(int argc, char* argv[]) {
         }
 
         currentPath = argv[1];
-        print_tree(currentPath);
+        print_tree(counter, currentPath);
         return 0;
     }
 
-    print_tree(currentPath);
+    print_tree(counter, currentPath);
 }
