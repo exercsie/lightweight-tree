@@ -1,12 +1,18 @@
 #include <print>
 #include <filesystem>
 #include <cstdint>
+#include <string>
+
+namespace Console {
+    constexpr std::string console = "[CONSOLE]";
+    constexpr std::string error = "[ERROR]";
+}
 
 namespace Colours {
-    constexpr char BLUE[] = { "\033[34m" };
-    constexpr char WHITE[] = { "\033[37m" };
-    constexpr char GREEN[] = { "\033[32m" };
-    constexpr char ORANGE[] = { "\033[38;5;208m" };
+    constexpr std::string BLUE = { "\033[34m" };
+    constexpr std::string WHITE = { "\033[37m" };
+    constexpr std::string GREEN = { "\033[32m" };
+    constexpr std::string ORANGE = { "\033[38;5;208m" };
 }
 
 namespace Counters {
@@ -48,10 +54,21 @@ void print_tree(const std::filesystem::path& currentPath) {
     }
 
     std::println("{}", Colours::WHITE);
-    std::println("{} directories, {} executables, and {} total files.", Counters::directoryFileCounter, Counters::executableFileCounter, Counters::fileCounter);
+    std::println("{} directory(ies), {} executable(s), {} png(s), and {} total file(s).", Counters::directoryFileCounter, Counters::executableFileCounter, Counters::pngFileCounter, Counters::fileCounter);
 }
 
 int main(int argc, char* argv[]) {
     std::filesystem::path currentPath(".");
+    if(argc > 1) {
+        if(!std::filesystem::is_directory(argv[1])) {
+            std::println("{} {} is not a directory!", Console::error, argv[1]);
+            return 0;
+        }
+
+        currentPath = argv[1];
+        print_tree(currentPath);
+        return 0;
+    }
+
     print_tree(currentPath);
 }
