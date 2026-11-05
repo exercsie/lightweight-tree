@@ -24,6 +24,10 @@ struct Counters {
     std::uint32_t fileCounter{};
 };
 
+struct Flags {
+    bool ignore_dot_file_{ true };
+};
+
 bool is_file_png(const std::filesystem::directory_entry& dir) {
     const std::filesystem::path& pngFile(dir);
     return (pngFile.extension() == ".png");
@@ -34,14 +38,14 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
     return (perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
 }
 
-void print_tree(Counters& counter, const std::filesystem::path& currentPath, const std::filesystem::path& pathToIgnore = "", const bool directory_to_ignore_ = false) {
+void print_tree(Counters& counter, const std::filesystem::path& currentPath, const std::filesystem::path& pathToIgnore = "", const bool ignore_dot_file_ = false) {
     std::println("{}", currentPath.string());
     std::println("|");
 
     const std::string ignoreDotFiles = pathToIgnore.string();
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
         std::string dir_entry = dir.path().lexically_relative(currentPath).string();
-        if(directory_to_ignore_) {
+        if(ignore_dot_file_) {
             if(dir_entry.at(0) == ignoreDotFiles.at(0)) {
                 continue;
             }
@@ -68,39 +72,50 @@ void print_tree(Counters& counter, const std::filesystem::path& currentPath, con
     std::println("{} directory(ies), {} executable(s), {} png(s), and {} total file(s).", counter.directoryFileCounter, counter.executableFileCounter, counter.pngFileCounter, counter.fileCounter);
 }
 
-int main(int argc, char* argv[]) {
-    Counters counter;
-    std::filesystem::path currentPath(".");
+void input_handling(Counters& counter, std::filesystem::path& currentPath, int argc, char* argv[]) {
+    const Flags flag;
     // print tree in current directory
     if(!(argc > 1)) {
         print_tree(counter, currentPath);
-        return 0;
+        exit(0);
     }
 
+    // Ignore every directory starting with argv[2]
     if(std::strcmp(argv[1], "-I") == 0) {
         // Make sure the user entered a directory after the -I flag
         if(argc != 3) {
             std::println("{} Please enter a directory to ignore!", Console::error);
-            return 1;
+            exit(1);
+        }
+
+        std::string_view checkArg2HasOneVal(argv[2]);
+        if(checkArg2HasOneVal.length() != 1) {
+            std::println("{} Please only enter a single character!", Console::error);
+            exit(1);
         }
 
         if(!std::filesystem::is_directory(argv[2])) {
             std::println("{} {} is not a directory!", Console::error, argv[2]);
-            return 1;
+            exit(1);
         }
 
         currentPath = argv[2];
-        const bool directory_to_ignore_{ true };
-        print_tree(counter, ".", argv[2], directory_to_ignore_);
-        return 0;
+        print_tree(counter, ".", argv[2], flag.ignore_dot_file_);
+        exit(0);
     }
 
     if(!std::filesystem::is_directory(argv[1])) {
         std::println("{} {} is not a directory!", Console::error, argv[1]);
-        return 1;
+        exit(1);
     }
 
     currentPath = argv[1];
     print_tree(counter, currentPath);
-    return 0;
+}
+
+int main(int argc, char* argv[]) {
+    Counters counter;
+    std::filesystem::path currentPath(".");
+
+    input_handling(counter, currentPath, argc, argv);
 }
