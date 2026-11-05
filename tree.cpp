@@ -1,3 +1,5 @@
+#include <cstdlib>
+#include <cstring>
 #include <print>
 #include <filesystem>
 #include <cstdint>
@@ -22,7 +24,7 @@ struct Counters {
     std::uint32_t fileCounter{};
 };
 
-bool is_file_png(const std::filesystem::directory_entrsy& dir) {
+bool is_file_png(const std::filesystem::directory_entry& dir) {
     const std::filesystem::path& pngFile(dir);
     return (pngFile.extension() == ".png");
 }
@@ -32,22 +34,31 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
     return (perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
 }
 
-void print_tree(Counters& counter, const std::filesystem::path& currentPath) {
+void print_tree(Counters& counter, const std::filesystem::path& currentPath, const std::filesystem::path& pathToIgnore = "", const bool directory_to_ignore_ = false) {
     std::println("{}", currentPath.string());
     std::println("|");
+
+    const std::string ignoreDotFiles = pathToIgnore.string();
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
+        std::string dir_entry = dir.path().lexically_relative(currentPath).string();
+        if(directory_to_ignore_) {
+            if(dir_entry.at(0) == ignoreDotFiles.at(0)) {
+                continue;
+            }
+        }
+
         std::print("{}├", Colours::WHITE);
         if(dir.is_directory()) {
             ++counter.directoryFileCounter;
-            std::println("{}{}", Colours::BLUE, dir.path().lexically_relative(currentPath).string());
+            std::println("{}{}", Colours::BLUE, dir_entry);
         } else if(is_file_executable(dir)) {
             ++counter.executableFileCounter;
-            std::println("{}{}", Colours::GREEN, dir.path().lexically_relative(currentPath).string());
+            std::println("{}{}", Colours::GREEN, dir_entry);
         } else if(is_file_png(dir)) {
             ++counter.pngFileCounter;
-            std::println("{}{}", Colours::ORANGE, dir.path().lexically_relative(currentPath).string());
+            std::println("{}{}", Colours::ORANGE, dir_entry);
         } else {
-            std::println("{}{}", Colours::WHITE, dir.path().lexically_relative(currentPath).string());
+            std::println("{}{}", Colours::WHITE, dir_entry);
         }
 
         ++counter.fileCounter;
@@ -60,16 +71,36 @@ void print_tree(Counters& counter, const std::filesystem::path& currentPath) {
 int main(int argc, char* argv[]) {
     Counters counter;
     std::filesystem::path currentPath(".");
-    if(argc > 1) {
-        if(!std::filesystem::is_directory(argv[1])) {
-            std::println("{} {} is not a directory!", Console::error, argv[1]);
-            return 0;
-        }
-
-        currentPath = argv[1];
+    // print tree in current directory
+    if(!(argc > 1)) {
         print_tree(counter, currentPath);
         return 0;
     }
 
+    if(std::strcmp(argv[1], "-I") == 0) {
+        // Make sure the user entered a directory after the -I flag
+        if(argc != 3) {
+            std::println("{} Please enter a directory to ignore!", Console::error);
+            return 1;
+        }
+
+        if(!std::filesystem::is_directory(argv[2])) {
+            std::println("{} {} is not a directory!", Console::error, argv[2]);
+            return 1;
+        }
+
+        currentPath = argv[2];
+        const bool directory_to_ignore_{ true };
+        print_tree(counter, ".", argv[2], directory_to_ignore_);
+        return 0;
+    }
+
+    if(!std::filesystem::is_directory(argv[1])) {
+        std::println("{} {} is not a directory!", Console::error, argv[1]);
+        return 1;
+    }
+
+    currentPath = argv[1];
     print_tree(counter, currentPath);
+    return 0;
 }
