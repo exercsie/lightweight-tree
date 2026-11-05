@@ -25,8 +25,22 @@ struct Counters {
 };
 
 struct Flags {
-    bool ignore_dot_file_{ true };
+    bool ignore_dot_files_{ false };
+    bool ignore_specfiic_directory_{ false };
 };
+
+struct StringData {
+    std::string inputtedFlag;
+    std::string_view inputtedDirectory;
+};
+
+struct States {
+    Counters counter;
+    Flags flag;
+    StringData data;
+};
+
+inline States state;
 
 bool is_file_png(const std::filesystem::directory_entry& dir) {
     const std::filesystem::path& pngFile(dir);
@@ -38,84 +52,108 @@ bool is_file_executable(const std::filesystem::directory_entry& dir) {
     return (perms & std::filesystem::perms::owner_exec) != std::filesystem::perms::none;
 }
 
-void print_tree(Counters& counter, const std::filesystem::path& currentPath, const std::filesystem::path& pathToIgnore = "", const bool ignore_dot_file_ = false) {
+void print_tree(const std::filesystem::path& currentPath = ".", const std::filesystem::path& pathToIgnore = "") {
     std::println("{}", currentPath.string());
     std::println("|");
 
-    const std::string ignoreDotFiles = pathToIgnore.string();
+    const std::string ignore = pathToIgnore.string();
     for(const std::filesystem::directory_entry& dir : std::filesystem::recursive_directory_iterator(currentPath)) {
         std::string dir_entry = dir.path().lexically_relative(currentPath).string();
-        if(ignore_dot_file_) {
-            if(dir_entry.at(0) == ignoreDotFiles.at(0)) {
+        if(state.flag.ignore_dot_files_) {
+            if(dir_entry.at(0) == ignore.at(0)) {
+                continue;
+            }
+        }
+
+        if(state.flag.ignore_specfiic_directory_) {
+            if(dir_entry == ignore) {
                 continue;
             }
         }
 
         std::print("{}├", Colours::WHITE);
         if(dir.is_directory()) {
-            ++counter.directoryFileCounter;
+            ++state.counter.directoryFileCounter;
             std::println("{}{}", Colours::BLUE, dir_entry);
         } else if(is_file_executable(dir)) {
-            ++counter.executableFileCounter;
+            ++state.counter.executableFileCounter;
             std::println("{}{}", Colours::GREEN, dir_entry);
         } else if(is_file_png(dir)) {
-            ++counter.pngFileCounter;
+            ++state.counter.pngFileCounter;
             std::println("{}{}", Colours::ORANGE, dir_entry);
         } else {
             std::println("{}{}", Colours::WHITE, dir_entry);
         }
 
-        ++counter.fileCounter;
+        ++state.counter.fileCounter;
     }
 
     std::println("{}", Colours::WHITE);
-    std::println("{} directory(ies), {} executable(s), {} png(s), and {} total file(s).", counter.directoryFileCounter, counter.executableFileCounter, counter.pngFileCounter, counter.fileCounter);
+    std::println("{} directory(ies), {} executable(s), {} png(s), and {} total file(s).", state.counter.directoryFileCounter, state.counter.executableFileCounter, state.counter.pngFileCounter, state.counter.fileCounter);
 }
 
-void input_handling(Counters& counter, std::filesystem::path& currentPath, int argc, char* argv[]) {
-    const Flags flag;
-    // print tree in current directory
-    if(!(argc > 1)) {
-        print_tree(counter, currentPath);
-        exit(0);
+void directory_checker_handling(const std::string_view directory) {
+    if(!std::filesystem::is_directory(directory)) {
+        std::println("{} {} is not a directory!", Console::error, directory);
+        exit(1);
     }
+}
 
+void flag_handling(std::filesystem::path& currentPath, int argc, const std::string inputtedFlag, const std::string_view inputtedDirectory) {
     // Ignore every directory starting with argv[2]
-    if(std::strcmp(argv[1], "-I") == 0) {
+    if(std::strcmp(inputtedFlag.c_str(), "-I") == 0) {
         // Make sure the user entered a directory after the -I flag
         if(argc != 3) {
-            std::println("{} Please enter a directory to ignore!", Console::error);
+            std::println("{} Must have three arguments! tree [flag] [dir]", Console::error);
             exit(1);
         }
 
-        std::string_view checkArg2HasOneVal(argv[2]);
+        const std::string_view checkArg2HasOneVal(inputtedDirectory);
         if(checkArg2HasOneVal.length() != 1) {
             std::println("{} Please only enter a single character!", Console::error);
             exit(1);
         }
 
-        if(!std::filesystem::is_directory(argv[2])) {
-            std::println("{} {} is not a directory!", Console::error, argv[2]);
-            exit(1);
-        }
-
-        currentPath = argv[2];
-        print_tree(counter, ".", argv[2], flag.ignore_dot_file_);
+        directory_checker_handling(inputtedDirectory);
+        state.flag.ignore_dot_files_ = true;
+        print_tree(".", inputtedDirectory);
         exit(0);
     }
 
-    if(!std::filesystem::is_directory(argv[1])) {
-        std::println("{} {} is not a directory!", Console::error, argv[1]);
-        exit(1);
+    // Ignore a specific directory
+    if(std::strcmp(inputtedFlag.c_str(), "-Id") == 0) {
+        if(argc != 3) {
+            std::println("{} Please enter a directory to ignore!", Console::error);
+            exit(1);
+        }
+
+        directory_checker_handling(inputtedDirectory);
+        state.flag.ignore_specfiic_directory_ = true;
+        print_tree(".", inputtedDirectory);
+        exit(0);
     }
 
-    currentPath = argv[1];
-    print_tree(counter, currentPath);
+    print_tree(inputtedFlag);
 }
 
 int main(int argc, char* argv[]) {
-    Counters counter;
     std::filesystem::path currentPath(".");
 
-    input_handling(counter, currentPath, argc, argv);
+    // Print current directory tree
+    if(!(argc > 1)) {
+        print_tree();
+        return 1;
+    }
+
+    // Print argv[1] directory specified tree
+    if(argc == 2) {
+        directory_checker_handling(argv[1]);
+        print_tree(argv[1]);
+        return 1;
+    }
+
+    // Print current directory tree with specified flags
+    state.data.inputtedFlag = argv[1];
+    state.data.inputtedDirectory = argv[2];
+    flag_handling(currentPath, argc, state.data.inputtedFlag, state.data.inputtedDirectory);
 }
